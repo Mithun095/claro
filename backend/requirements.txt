@@ -5,3 +5,6 @@ uvicorn[standard]>=0.30,<1.0
 # Stage 1 — speech-to-text (Task 2)
 faster-whisper>=1.0,<2.0
 python-multipart>=0.0.9   # required by FastAPI for file uploads (UploadFile)
+
+# Stage 2 — LLM via local Ollama (Task 3)
+ollama>=0.4,<1.0
