@@ -43,9 +43,9 @@ def llm_complete(prompt: str) -> str:
 
     This is the ONLY place the LLM is invoked.
     """
-    # Low temperature: this is a medical scribe, so we want faithful, low-variance
+    # Temperature 0: this is a medical scribe, so we want faithful, deterministic
     # output rather than creative text. Configurable via OLLAMA_TEMPERATURE.
-    temperature = float(os.getenv("OLLAMA_TEMPERATURE", "0.2"))
+    temperature = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
     response = _client().generate(
         model=model_name(),
         prompt=prompt,

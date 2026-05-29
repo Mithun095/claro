@@ -1,7 +1,7 @@
 """FastAPI entry point for the radiology AI scribe backend.
 
-Phase 1: Stage 1 (transcription) lives here as `POST /transcribe`. Stage 2
-(`/structure`) is added in a later PLAN.md task — do not add it ahead of time.
+Phase 1 routes: Stage 1 transcription (`POST /transcribe`) and Stage 2
+structuring with auto-normal statements (`POST /structure`).
 """
 
 import os
@@ -18,7 +18,9 @@ load_dotenv(BACKEND_DIR / ".env")
 from fastapi import FastAPI, File, HTTPException, UploadFile  # noqa: E402
 from fastapi.concurrency import run_in_threadpool  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
 
+from .structure import structure_report  # noqa: E402
 from .transcribe import transcribe_audio  # noqa: E402
 
 app = FastAPI(title="Radiology AI Scribe API", version="0.1.0")
@@ -73,3 +75,30 @@ async def transcribe(file: UploadFile = File(...)) -> dict[str, str]:
             os.unlink(tmp_path)
 
     return {"transcript": transcript}
+
+
+class StructureRequest(BaseModel):
+    transcript: str
+    template: str
+
+
+@app.post("/structure")
+async def structure(req: StructureRequest) -> dict[str, str]:
+    """Stage 2: turn a raw transcript + template into a structured report.
+
+    Slots spoken findings into their sections, auto-fills the NORMAL statement for
+    every unmentioned organ, corrects misheard terms, and writes an Impression of
+    only the positive findings (the rules live in app/prompts.py).
+    """
+    if not req.transcript.strip():
+        raise HTTPException(status_code=400, detail="transcript is empty")
+    if not req.template.strip():
+        raise HTTPException(status_code=400, detail="template is empty")
+
+    try:
+        # Structuring is a blocking LLM call; keep it off the event loop.
+        report = await run_in_threadpool(structure_report, req.transcript, req.template)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Structuring failed: {exc}") from exc
+
+    return {"report": report}
