@@ -1,5 +1,7 @@
-# Backend dependencies — Phase 1 skeleton.
-# Feature deps (faster-whisper, ollama client, python-multipart, ...) are added
-# in their own PLAN.md tasks, one slice at a time.
+# Backend dependencies. Added per PLAN.md task, one slice at a time.
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.30,<1.0
+
+# Stage 1 — speech-to-text (Task 2)
+faster-whisper>=1.0,<2.0
+python-multipart>=0.0.9   # required by FastAPI for file uploads (UploadFile)
