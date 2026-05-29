@@ -1,0 +1,39 @@
+# ---- Python (backend) ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Node / Next.js (frontend) ----
+node_modules/
+.next/
+out/
+build/
+dist/
+*-debug.log*
+
+# ---- Environment / secrets (never commit) ----
+.env
+.env.*
+!.env.example
+
+# ---- Model caches (faster-whisper / Hugging Face / STT & LLM weights) ----
+models/
+*.bin
+*.pt
+*.onnx
+*.ckpt
+.cache/
+**/.cache/huggingface/
+
+# ---- OS / editor cruft ----
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

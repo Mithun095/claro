@@ -1,0 +1,14 @@
+non contrast CT of the abdomen. patient has right upper quadrant pain.
+
+liver is enlarged measuring about 18 centimeters. there is a small calculus in the
+gallbladder, no wall thickening. uh mild right hydronephrosis. spleen looks fine.
+everything else is normal.
+
+# NOTE: This is FAKE data for development only. No real patient.
+# Expected behaviour from the structuring step:
+#  - LIVER section: hepatomegaly, ~18 cm (positive finding)
+#  - GALLBLADDER: small calculus, no wall thickening (positive finding)
+#  - KIDNEYS: mild right hydronephrosis (positive finding)
+#  - SPLEEN, PANCREAS, ADRENALS, BLADDER, BOWEL, PERITONEUM, BONES:
+#       auto-filled with their NORMAL statements (not mentioned)
+#  - IMPRESSION: hepatomegaly, cholelithiasis, mild right hydronephrosis
