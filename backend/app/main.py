@@ -4,6 +4,9 @@ Phase 1 routes: Stage 1 transcription (`POST /transcribe`) and Stage 2
 structuring with auto-normal statements (`POST /structure`).
 """
 
+import asyncio
+import contextlib
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -15,11 +18,20 @@ from dotenv import load_dotenv
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BACKEND_DIR / ".env")
 
-from fastapi import FastAPI, File, HTTPException, UploadFile  # noqa: E402
+import numpy as np  # noqa: E402
+from fastapi import (  # noqa: E402
+    FastAPI,
+    File,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.concurrency import run_in_threadpool  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+from .streaming import MIN_STEP_AUDIO_S, StreamingTranscriber, get_streaming_model  # noqa: E402
 from .structure import structure_report  # noqa: E402
 from .transcribe import transcribe_audio  # noqa: E402
 
@@ -102,3 +114,53 @@ async def structure(req: StructureRequest) -> dict[str, str]:
         raise HTTPException(status_code=500, detail=f"Structuring failed: {exc}") from exc
 
     return {"report": report}
+
+
+@app.websocket("/ws/transcribe")
+async def ws_transcribe(websocket: WebSocket) -> None:
+    """Stage 1 (streaming): receive 16 kHz mono PCM (Int16LE) frames and stream
+    back incremental {committed, partial} transcript updates, then a final
+    transcript when the client sends {"type": "stop"} (or disconnects).
+    """
+    await websocket.accept()
+    model = await run_in_threadpool(get_streaming_model)
+    transcriber = StreamingTranscriber(model)
+    stop = asyncio.Event()
+
+    async def receive_audio() -> None:
+        try:
+            while True:
+                message = await websocket.receive()
+                if message.get("type") == "websocket.disconnect":
+                    return
+                chunk = message.get("bytes")
+                if chunk:
+                    pcm = np.frombuffer(chunk, dtype=np.int16).astype(np.float32) / 32768.0
+                    transcriber.add_audio(pcm)
+                    continue
+                text = message.get("text")
+                if text:
+                    with contextlib.suppress(json.JSONDecodeError):
+                        if json.loads(text).get("type") == "stop":
+                            return
+        finally:
+            stop.set()
+
+    receiver = asyncio.create_task(receive_audio())
+    try:
+        # Process loop: re-run the model whenever enough new audio has arrived.
+        while not stop.is_set():
+            await asyncio.sleep(0.2)
+            if transcriber.new_audio_seconds() >= MIN_STEP_AUDIO_S:
+                update = await run_in_threadpool(transcriber.step)
+                if update:
+                    await websocket.send_json({"type": "update", **update})
+        final_text = await run_in_threadpool(transcriber.finalize)
+        with contextlib.suppress(Exception):
+            await websocket.send_json({"type": "final", "text": final_text})
+    except WebSocketDisconnect:
+        pass
+    finally:
+        receiver.cancel()
+        with contextlib.suppress(Exception):
+            await websocket.close()

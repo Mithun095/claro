@@ -2,6 +2,12 @@
 // hosted deployment can point elsewhere; it defaults to the local FastAPI server.
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/** Build a WebSocket URL for a backend path from the configured API base.
+ *  http -> ws and https -> wss (replacing the leading scheme only). */
+export function wsUrl(path: string): string {
+  return `${API_URL.replace(/^http/, "ws")}${path}`;
+}
+
 /** Stage 1: upload recorded audio, get the raw transcript back. */
 export async function transcribeAudio(audio: Blob): Promise<string> {
   const form = new FormData();

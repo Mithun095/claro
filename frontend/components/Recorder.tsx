@@ -4,59 +4,64 @@ import { useRef, useState } from "react";
 import { Loader2, Mic, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { transcribeAudio } from "@/lib/api";
+import { startLiveTranscription, type LiveSession } from "@/lib/liveTranscribe";
 
 interface RecorderProps {
-  /** Called with the transcript once recording is stopped and transcribed. */
+  /** Receives committed transcript text live while recording, then the final
+   *  transcript when recording stops. */
   onTranscript: (text: string) => void;
+  /** Receives the in-progress (not-yet-committed) words while recording. */
+  onPartial?: (partial: string) => void;
   disabled?: boolean;
 }
 
-/** Mic button: record from the browser, upload to /transcribe on stop. */
-export function Recorder({ onTranscript, disabled }: RecorderProps) {
+/** Mic button: streams audio to /ws/transcribe and shows the transcript live. */
+export function Recorder({ onTranscript, onPartial, disabled }: RecorderProps) {
   const [recording, setRecording] = useState(false);
-  const [processing, setProcessing] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const sessionRef = useRef<LiveSession | null>(null);
 
   async function start() {
     setError(null);
+    onPartial?.("");
+    // A fresh dictation replaces any previous transcript.
+    onTranscript("");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      chunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      recorder.onstop = async () => {
-        // Release the mic so the browser stops showing the recording indicator.
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
-        setProcessing(true);
-        try {
-          onTranscript(await transcribeAudio(blob));
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Transcription failed.");
-        } finally {
-          setProcessing(false);
-        }
-      };
-
-      recorder.start();
-      recorderRef.current = recorder;
+      sessionRef.current = await startLiveTranscription({
+        onUpdate: ({ committed, partial }) => {
+          onTranscript(committed);
+          onPartial?.(partial);
+        },
+        onError: (err) => {
+          // Mid-stream connection loss: surface it and drop out of recording.
+          setError(err.message);
+          setRecording(false);
+          onPartial?.("");
+          sessionRef.current = null;
+        },
+      });
       setRecording(true);
-    } catch {
-      setError("Microphone access was denied or is unavailable.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start recording.");
     }
   }
 
-  function stop() {
-    recorderRef.current?.stop();
+  async function stop() {
+    const session = sessionRef.current;
+    sessionRef.current = null;
     setRecording(false);
+    onPartial?.("");
+    if (!session) return;
+    setFinalizing(true);
+    try {
+      onTranscript(await session.stop());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not finalize the transcript.");
+    } finally {
+      setFinalizing(false);
+    }
   }
 
   return (
@@ -66,12 +71,12 @@ export function Recorder({ onTranscript, disabled }: RecorderProps) {
         size="lg"
         variant={recording ? "destructive" : "default"}
         onClick={recording ? stop : start}
-        disabled={disabled || processing}
+        disabled={disabled || finalizing}
         className="w-fit"
       >
-        {processing ? (
+        {finalizing ? (
           <>
-            <Loader2 className="animate-spin" /> Transcribing…
+            <Loader2 className="animate-spin" /> Finishing…
           </>
         ) : recording ? (
           <>
@@ -85,7 +90,7 @@ export function Recorder({ onTranscript, disabled }: RecorderProps) {
       </Button>
       {recording && (
         <p className="text-sm text-muted-foreground">
-          Recording… speak your findings, then press Stop.
+          Listening… your words appear below as you speak, then press Stop.
         </p>
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}

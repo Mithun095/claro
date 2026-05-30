@@ -19,6 +19,8 @@ import { TEMPLATES } from "@/lib/templates";
 export default function Home() {
   const [templateId, setTemplateId] = useState(TEMPLATES[0].id);
   const [transcript, setTranscript] = useState("");
+  // In-progress words from the live stream, not yet committed to the transcript.
+  const [partial, setPartial] = useState("");
 
   const template = useMemo(
     () => TEMPLATES.find((t) => t.id === templateId) ?? TEMPLATES[0],
@@ -51,7 +53,7 @@ export default function Home() {
           <CardDescription>Record, speak your findings, then stop to transcribe.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <Recorder onTranscript={setTranscript} />
+          <Recorder onTranscript={setTranscript} onPartial={setPartial} />
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="transcript">Transcript (editable)</Label>
             <Textarea
@@ -61,6 +63,11 @@ export default function Home() {
               placeholder="Your transcribed dictation will appear here — fix any mishearings before generating."
               className="min-h-28"
             />
+            {partial && (
+              <p className="text-sm italic text-muted-foreground" aria-live="polite">
+                {partial}…
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

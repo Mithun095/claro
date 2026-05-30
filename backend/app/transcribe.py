@@ -27,33 +27,38 @@ RADIOLOGY_INITIAL_PROMPT = (
 )
 
 
-@lru_cache(maxsize=1)
-def _get_model() -> WhisperModel:
-    """Load the Whisper model once (lazily) and cache it for the process.
+@lru_cache(maxsize=3)
+def _load_model(model_name: str) -> WhisperModel:
+    """Load (and cache) a faster-whisper model by name, with CPU-friendly defaults.
 
-    Loading is expensive and downloads the weights on first use, so we keep a
-    single process-wide instance. Configuration comes from env vars so the model
+    Loading is expensive and downloads the weights on first use, so each distinct
+    model is cached for the process. Configuration comes from env vars so models
     can be swapped in one place (CLAUDE.md):
 
-      WHISPER_MODEL           default "medium" (large-v3 = best but ~3GB/slow on CPU)
-      WHISPER_FALLBACK_MODEL  used if WHISPER_MODEL fails to load (default "medium")
+      WHISPER_MODEL           batch model, default "medium" (large-v3 = best but
+                              ~3GB/slow on CPU)
+      WHISPER_STREAMING_MODEL live model (see streaming.py); defaults to WHISPER_MODEL
+      WHISPER_FALLBACK_MODEL  used if a model fails to load (default "medium")
       WHISPER_DEVICE          "cpu" (default) or "cuda"
       WHISPER_COMPUTE_TYPE    "int8" (default) keeps CPU memory/latency reasonable
 
-    If the configured model can't load (e.g. too large for this machine), we fall
-    back to the smaller model, as CLAUDE.md permits.
+    If the requested model can't load (e.g. too large for this machine), fall back
+    to the smaller model, as CLAUDE.md permits.
     """
-    model_name = os.getenv("WHISPER_MODEL", "medium")
-    fallback_model = os.getenv("WHISPER_FALLBACK_MODEL", "medium")
     device = os.getenv("WHISPER_DEVICE", "cpu")
     compute_type = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
-
+    fallback_model = os.getenv("WHISPER_FALLBACK_MODEL", "medium")
     try:
         return WhisperModel(model_name, device=device, compute_type=compute_type)
     except Exception:
         if model_name != fallback_model:
             return WhisperModel(fallback_model, device=device, compute_type=compute_type)
         raise
+
+
+def _get_model() -> WhisperModel:
+    """The batch transcription model (WHISPER_MODEL env, default medium)."""
+    return _load_model(os.getenv("WHISPER_MODEL", "medium"))
 
 
 def transcribe_audio(audio_path: str) -> str:
