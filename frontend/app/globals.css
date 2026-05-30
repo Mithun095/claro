@@ -7,7 +7,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -55,18 +55,21 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Clinical green accent — the one brand colour, used for primary actions,
+     focus rings and section highlights. Shade tuned for AA contrast as both a
+     button fill (light text) and a text/icon colour on a white surface. */
+  --primary: oklch(0.52 0.15 142);
+  --primary-foreground: oklch(0.985 0.01 142);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --muted-foreground: oklch(0.55 0.01 150);
+  --accent: oklch(0.96 0.03 145);
+  --accent-foreground: oklch(0.32 0.07 145);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: oklch(0.92 0.004 150);
+  --input: oklch(0.92 0.004 150);
+  --ring: oklch(0.52 0.15 142);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -90,18 +93,18 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.72 0.16 144);
+  --primary-foreground: oklch(0.21 0.04 145);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --muted-foreground: oklch(0.715 0.01 150);
+  --accent: oklch(0.3 0.05 145);
+  --accent-foreground: oklch(0.95 0.02 142);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.72 0.16 144);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -123,6 +126,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* A faint teal glow at the top gives the page depth so the white cards read
+       as raised surfaces instead of blending into a blank background. */
+    background-image: radial-gradient(
+      125% 125% at 50% 0%,
+      color-mix(in oklch, var(--primary) 9%, var(--background)) 0%,
+      var(--background) 42%
+    );
+    background-attachment: fixed;
   }
   html {
     @apply font-sans;
