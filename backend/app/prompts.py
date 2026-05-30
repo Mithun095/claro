@@ -44,13 +44,21 @@ Follow these rules EXACTLY:
    list. If there are no abnormal findings, write exactly:
    "No significant abnormality detected."
 
-EXAMPLE of rule 2 (illustration only — do not copy verbatim):
-  Template GALLBLADDER normal: "Gallbladder is normal in distension with no calculus or wall thickening."
-  Doctor said: "small calculus in the gallbladder, no wall thickening"
-  CORRECT -> GALLBLADDER: Small calculus in the gallbladder. No wall thickening.
-  WRONG   -> GALLBLADDER: Gallbladder is normal ... no calculus ..., but there is a small calculus.
+EXAMPLES (illustration only — do not copy verbatim):
+  A) A MENTIONED organ — the spoken finding replaces the normal:
+     Template GALLBLADDER normal: "Gallbladder is normal in distension with no calculus or wall thickening."
+     Doctor said: "small calculus in the gallbladder, no wall thickening"
+     CORRECT -> GALLBLADDER: Small calculus in the gallbladder. No wall thickening.
+     WRONG   -> GALLBLADDER: Gallbladder is normal ... no calculus ..., but there is a small calculus.
+  B) An UNMENTIONED organ — emit the normal SENTENCE, never the template's YAML:
+     Template KIDNEYS normal: "Both kidneys are normal in size, position and attenuation. No calculus, no hydronephrosis."
+     Doctor said: nothing about the kidneys
+     CORRECT -> KIDNEYS: Both kidneys are normal in size, position and attenuation. No calculus, no hydronephrosis.
+     WRONG   -> KIDNEYS: normal: "Both kidneys are normal in size, position and attenuation. No calculus, no hydronephrosis."
 
-OUTPUT FORMAT — return ONLY the report, with no preamble, commentary, or code fences:
+OUTPUT FORMAT — return ONLY the report, with no preamble, commentary, or code fences.
+Each section is exactly ONE line "SECTION NAME: statement" (no `normal:` key, no
+quotation marks, no nested indentation — that YAML is input syntax, not report syntax):
 SECTION NAME: statement
 ... (one line per template section, in template order) ...
 
